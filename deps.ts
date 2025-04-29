@@ -1,11 +1,9 @@
 // Bun WebUI
 // Dependences needed by webui.ts
 
-import {
-  fileExists,
-  downloadCoreLibrary,
-  currentModulePath,
-} from "./src/utils.ts";
+import { join } from "path";
+import { resourceDir } from "../src/constants.ts";
+import { fileExists, downloadCoreLibrary } from "./src/utils.ts";
 
 /**
  * Determines the correct library filename based on the current operating system and CPU architecture.
@@ -75,8 +73,7 @@ async function getLibName() {
   }
 
   // Construct the full path to the dynamic library using the current module path.
-  const srcFullPath = currentModulePath;
-  const fullPath = srcFullPath + fileName;
+  const fullPath = join(resourceDir, fileName);
 
   // Verify if the library exists at the computed path.
   const exists = await fileExists(fullPath);
@@ -86,6 +83,7 @@ async function getLibName() {
   }
 
   // Return the final resolved path to the dynamic library.
+  console.log("WebUI Library", fullPath);
   return fullPath;
 }
 

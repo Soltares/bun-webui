@@ -7,6 +7,7 @@
   All rights reserved.
   Canada.
 */
+declare var self: Worker;
 
 import { JSCallback } from "bun:ffi";
 import { loadLib } from "./lib.ts";
@@ -24,13 +25,7 @@ self.onmessage = (event: MessageEvent) => {
     const elementId = data.elementId;
     const callbackIndex = data.callbackIndex;
     const callbackResource = new JSCallback(
-      (
-        _param_window: number | bigint,
-        _param_event_type: number | bigint,
-        _param_element: number,
-        _param_event_number: number | bigint,
-        _param_bind_id: number | bigint
-      ) => {
+      (_param_window: number | bigint, _param_event_type: number | bigint, _param_element: number, _param_event_number: number | bigint, _param_bind_id: number | bigint) => {
         self.postMessage({
           action: "invokeCallback",
           data: {
@@ -49,7 +44,7 @@ self.onmessage = (event: MessageEvent) => {
         threadsafe: true,
       }
     );
-    _lib.symbols.webui_interface_bind(windowId, toCString(elementId), callbackResource);
+    _lib.symbols.webui_interface_bind(windowId, toCString(elementId), callbackResource as any);
     self.postMessage({ id, result: "bind_success" });
   } else if (action === "setFileHandler") {
     // File Handler
@@ -57,10 +52,7 @@ self.onmessage = (event: MessageEvent) => {
     const windowId = BigInt(data.windowId);
     const callbackIndex = data.callbackIndex;
     const callbackResource = new JSCallback(
-      (
-        _param_url: number,
-        _param_length: number
-      ) => {
+      (_param_url: number, _param_length: number) => {
         self.postMessage({
           action: "invokeFileHandler",
           data: {
@@ -77,7 +69,7 @@ self.onmessage = (event: MessageEvent) => {
         threadsafe: true,
       }
     );
-    _lib.symbols.webui_set_file_handler(windowId, callbackResource);
+    _lib.symbols.webui_set_file_handler(windowId, callbackResource as any);
     self.postMessage({ id, result: "setFileHandler_success" });
   }
 };

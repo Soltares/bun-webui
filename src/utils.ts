@@ -2,21 +2,27 @@
 // Utilities
 
 import { promises as fs } from "fs";
-import { spawn } from "bun";
+import { join, dirname } from "path";
+
+export let isDev = process.argv0 == "bun"
+
+/** Absolute path to executable file */
+export let executableFile = isDev
+  ? Bun.main
+  : Bun.which(process.argv0) ?? process.argv0
+
+/** Absolute path to executable directory */
+export let executableDir = isDev
+  ? import.meta.dir
+  : dirname(executableFile)
+
+/** Normalized resource path for Dev and Prod */
+export let resourceDir = isDev
+  ? join(executableDir, "..", "dist")
+  : executableDir
 
 // The WebUI core version to download
 const WebUICoreVersion = "2.5.0-beta.3";
-
-/**
- * Combine paths using the OS-specific separator.
- * Replaces multiple separators with a single one.
- */
-function joinPath(...segments: string[]): string {
-  const isWindows = process.platform === "win32";
-  const separator = isWindows ? "\\" : "/";
-  const joinedPath = segments.join(separator).replace(/[\/\\]+/g, separator);
-  return joinedPath;
-}
 
 /**
  * Download a file from the Internet and save it to the destination.
@@ -62,32 +68,6 @@ async function copyFileOverwrite(srcPath: string, destPath: string) {
   }
   await fs.copyFile(srcPath, destPath);
 }
-
-/**
- * Get current module full folder path.
- */
-export const currentModulePath = (() => {
-  let directory = new URL(import.meta.url).pathname;
-  const isWindows = process.platform === "win32";
-  if (isWindows) {
-    if (directory.startsWith("/")) {
-      // Remove first '/'
-      directory = directory.slice(1);
-    }
-    // Replace all forward slashes with backslashes for Windows paths
-    directory = directory.replaceAll("/", "\\");
-  }
-  const pathSeparator = isWindows ? "\\" : "/";
-  const lastIndex = directory.lastIndexOf(pathSeparator);
-  directory = directory.substring(0, lastIndex + 1);
-  if (directory === "") {
-    return "." + pathSeparator;
-  }
-  if (directory.startsWith("/x/")) {
-    return "." + pathSeparator + directory.slice(1).replace(/\//g, pathSeparator);
-  }
-  return directory;
-})();
 
 /**
  * Check if a file exists.
@@ -140,16 +120,16 @@ export async function downloadCoreLibrary() {
   }
 
   // Construct file name and download URL
-  const cacheDir = joinPath(currentModulePath, "cache");
+  const cacheDir = join(resourceDir, "cache");
   const fileName = `webui-${os}-${cc}-${arch}`;
   const fileUrl = `${baseUrl}${fileName}.zip`;
-  const outputDir = joinPath(currentModulePath, fileName);
+  const outputDir = join(resourceDir, fileName);
 
   // Create cache directory
   await createDirectory(cacheDir);
 
   // Download the archive
-  const zipPath = joinPath(cacheDir, `${fileName}.zip`);
+  const zipPath = join(cacheDir, `${fileName}.zip`);
   await downloadFile(fileUrl, zipPath);
 
   // Extract the archive
@@ -162,7 +142,7 @@ export async function downloadCoreLibrary() {
   // Copy library
   const libFile = process.platform === "win32" ? `webui-2.${ext}` : `libwebui-2.${ext}`;
   await createDirectory(outputDir);
-  await copyFileOverwrite(joinPath(cacheDir, fileName, libFile), joinPath(outputDir, libFile));
+  await copyFileOverwrite(join(cacheDir, fileName, libFile), join(outputDir, libFile));
 
   // Remove cache directory
   await fs.rm(cacheDir, { recursive: true, force: true });

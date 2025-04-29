@@ -10,7 +10,7 @@
 
 import { CString } from "bun:ffi";
 import { loadLib } from "./lib.ts";
-import {
+import type {
   BindCallback,
   BindFileHandlerCallback,
   Datatypes,
@@ -34,7 +34,8 @@ let _lib: WebUILib;
 //  [UserFunction] --> [Bind] --> [Worker] -> [WebUI]
 //  [WebUI] --> [Worker] --> [ffiWorker.onmessage] --> [UserFunction]
 
-const ffiWorker = new Worker(new URL("./ffi_worker.ts", import.meta.url).href, { type: "module" });
+const ffiWorker = new Worker("./bun-webui/src/ffi_worker.ts");
+
 const pendingResponses = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>();
 let callbackRegistry: BindCallback<any>[] = [];
 let callbackFileHandlerRegistry: BindFileHandlerCallback<any>[] = [];
@@ -78,7 +79,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
         typeof param_bind_id === "bigint"
           ? Number(param_bind_id)
           : Math.trunc(param_bind_id);
-          
+
       // Arguments
       const args = {
         number: (index: number): number => {
@@ -131,12 +132,12 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
       // Call the user callback
       const user_response: string|Uint8Array = await callbackFileHandlerFn(url_obj);
 
-      // We can pass a local buffer to WebUI like this: 
-      // `return user_response;` However, this may create 
+      // We can pass a local buffer to WebUI like this:
+      // `return user_response;` However, this may create
       // a memory leak because WebUI cannot free it, or cause
-      // memory corruption as Bun may free the buffer before 
-      // WebUI uses it. Therefore, the solution is to create 
-      // a safe WebUI buffer through WebUI API. This WebUI 
+      // memory corruption as Bun may free the buffer before
+      // WebUI uses it. Therefore, the solution is to create
+      // a safe WebUI buffer through WebUI API. This WebUI
       // buffer will be automatically freed by WebUI later.
       const webui_ptr :number = _lib.symbols.webui_malloc(BigInt(user_response.length));
 
